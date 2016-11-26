@@ -10,7 +10,7 @@ namespace BeEfficient.Pomodoro
     public class MainViewModel
     {
         private bool _running;
-        private CoreSystem _core;
+        private readonly CoreSystem _core;
 
         public string Progress { get; set; }
         public ICommand StartCommand { get; set; }
@@ -27,14 +27,16 @@ namespace BeEfficient.Pomodoro
             StopCommand  = new RelayCommand(Stop, CanStop);
         }
 
+        private void Start()
+        {
+            _core.Start();
+            _running = true;
+        }
+
         private void Stop()
         {
             _running = false;
-        }
-
-        private bool CanStop()
-        {
-            return _running;
+            _core.Stop();
         }
 
         private bool CanStart()
@@ -42,9 +44,9 @@ namespace BeEfficient.Pomodoro
             return _running == false;
         }
 
-        private void Start()
+        private bool CanStop()
         {
-            _running = true;
+            return _running;
         }
     }
 }
