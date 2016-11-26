@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="ActorSystem.cs" />
     <Compile Include="Actors\TimeCoordinatorActor.cs" />
+    <Compile Include="Actors\TimerActor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
