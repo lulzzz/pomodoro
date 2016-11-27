@@ -8,6 +8,7 @@ namespace BeEfficient.Pomodoro.Core.Actors
         private ICancelable _cancelRequest;
         private TimeSpan _timeLeft;
         private TimeSpan _interval;
+        private TimeSpan _originalDuration;
 
         #region messages
         public class StartCounting
@@ -61,10 +62,11 @@ namespace BeEfficient.Pomodoro.Core.Actors
 
         private void HandleActivation(StartCounting message)
         {
+            _originalDuration = message.Duration;
             _timeLeft = message.Duration;
             _interval = message.NotificationInterval;
 
-            _cancelRequest = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.Zero, message.NotificationInterval, Self, new Tick(), Self);
+            _cancelRequest = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.Zero, message.NotificationInterval, Self, new Tick(), Sender);
         }
 
         private void HandleStop(StopCounting message)
@@ -76,7 +78,7 @@ namespace BeEfficient.Pomodoro.Core.Actors
         {
             _timeLeft -= _interval;
 
-
+            Sender.Tell(new TimeCoordinatorActor.ElapsedTimeMessage(_timeLeft, _originalDuration));
         }
     }
 }

@@ -52,7 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ActorSystem.cs" />
+    <Compile Include="CoreSystem.cs" />
     <Compile Include="Actors\TimeCoordinatorActor.cs" />
     <Compile Include="Actors\TimerActor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

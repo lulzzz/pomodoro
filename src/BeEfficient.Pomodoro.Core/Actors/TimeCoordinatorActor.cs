@@ -6,15 +6,30 @@ namespace BeEfficient.Pomodoro.Core.Actors
 {
     public class TimeCoordinatorActor : ReceiveActor
     {
+        private readonly UpdateTimeAction _updateTimeAction;
+
         #region messages
         internal class StartMessage { }
         internal class StopMessage { }
+        internal class ElapsedTimeMessage
+        {
+            public TimeSpan RemainingTime { get; }
+            public TimeSpan InitialDuration { get; }
+
+            public ElapsedTimeMessage(TimeSpan remainingTime, TimeSpan initialDuration)
+            {
+                RemainingTime = remainingTime;
+                InitialDuration = initialDuration;
+            }
+        }
         #endregion
 
         private readonly IActorRef _timerActor;
         
-        public TimeCoordinatorActor()
+        public TimeCoordinatorActor(UpdateTimeAction updateTimeAction)
         {
+            _updateTimeAction = updateTimeAction;
+
             var timerActorProps = Props.Create(() => new TimerActor());
             _timerActor = Context.ActorOf(timerActorProps, "timerActor");
 
@@ -28,7 +43,7 @@ namespace BeEfficient.Pomodoro.Core.Actors
                 Context.GetLogger().Warning("Waiting - Start Message");
 
                 Become(Working);
-                _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.FromMilliseconds(25), TimeSpan.FromSeconds(1)));
+                _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.FromMinutes(25), TimeSpan.FromSeconds(1)));
             });
             Receive<StopMessage>(message => { });
         }
@@ -43,6 +58,12 @@ namespace BeEfficient.Pomodoro.Core.Actors
                 Become(Waiting);
                 _timerActor.Tell(new TimerActor.StopCounting());
             });
+            Receive<ElapsedTimeMessage>(message =>
+            {
+                _updateTimeAction(message.RemainingTime, message.InitialDuration);
+            });
         }
+
+        public delegate void UpdateTimeAction(TimeSpan remainingTime, TimeSpan initialDuration);
     }
 }

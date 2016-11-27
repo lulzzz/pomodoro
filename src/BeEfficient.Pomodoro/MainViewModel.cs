@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using BeEfficient.Pomodoro.Commands;
 using BeEfficient.Pomodoro.Core;
 using PropertyChanged;
@@ -20,11 +22,21 @@ namespace BeEfficient.Pomodoro
         {
             _core = new CoreSystem();
 
+            _core.StateChanged += CoreOnStateChanged;
+
             _running = false;
             Progress = TimeSpan.FromMinutes(25).ToString();
 
             StartCommand = new RelayCommand(Start, CanStart);
             StopCommand  = new RelayCommand(Stop, CanStop);
+        }
+
+        private void CoreOnStateChanged(TimeSpan remainingtime, TimeSpan initialduration)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                Progress = remainingtime.ToString();
+            });
         }
 
         private void Start()
