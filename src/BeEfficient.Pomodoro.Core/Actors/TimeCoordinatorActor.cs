@@ -117,7 +117,7 @@ namespace BeEfficient.Pomodoro.Core.Actors
                 _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.LongBreak));
             }
 
-            var duration = TimeSpan.FromSeconds(estimatedDuration).Add(TimeSpan.FromSeconds(1));
+            var duration = TimeSpan.FromMilliseconds(estimatedDuration).Add(TimeSpan.FromSeconds(1));
             _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.FromSeconds(1), duration, TimeSpan.FromSeconds(1)));
         }
     }
