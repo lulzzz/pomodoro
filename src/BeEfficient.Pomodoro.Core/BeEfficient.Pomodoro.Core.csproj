@@ -52,6 +52,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Actors\CycleTypes.cs" />
+    <Compile Include="Actors\NotificationActor.cs" />
     <Compile Include="CoreSystem.cs" />
     <Compile Include="Actors\TimeCoordinatorActor.cs" />
     <Compile Include="Actors\TimerActor.cs" />

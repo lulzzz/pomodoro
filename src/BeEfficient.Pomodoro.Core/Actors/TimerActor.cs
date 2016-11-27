@@ -1,5 +1,6 @@
 ﻿using System;
 using Akka.Actor;
+using Akka.Event;
 
 namespace BeEfficient.Pomodoro.Core.Actors
 {
@@ -14,10 +15,12 @@ namespace BeEfficient.Pomodoro.Core.Actors
         public class StartCounting
         {
             public TimeSpan Duration { get; }
-            public TimeSpan NotificationInterval { get;}
+            public TimeSpan Wait { get; }
+            public TimeSpan NotificationInterval { get; }
 
-            public StartCounting(TimeSpan duration, TimeSpan notificationInterval)
+            public StartCounting(TimeSpan wait, TimeSpan duration, TimeSpan notificationInterval)
             {
+                Wait = wait;
                 NotificationInterval = notificationInterval;
                 Duration = duration;
             }
@@ -37,7 +40,7 @@ namespace BeEfficient.Pomodoro.Core.Actors
 
         private void Active()
         {
-            Receive<StartCounting>(message => { });
+            Receive<StartCounting>(message => { Context.GetLogger().Warning("Already started"); });
             Receive<StopCounting>(message =>
             {
                 Become(Waiting);
@@ -51,8 +54,8 @@ namespace BeEfficient.Pomodoro.Core.Actors
 
         private void Waiting()
         {
-            Receive<StopCounting>(message => { });
-            Receive<Tick>(message => { });
+            Receive<StopCounting>(message => { Context.GetLogger().Warning("Waiting already"); });
+            Receive<Tick>(message => { Context.GetLogger().Warning("Currently waiting"); });
             Receive<StartCounting>(message =>
             {
                 Become(Active);
@@ -66,7 +69,7 @@ namespace BeEfficient.Pomodoro.Core.Actors
             _timeLeft = message.Duration;
             _interval = message.NotificationInterval;
 
-            _cancelRequest = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.Zero, message.NotificationInterval, Self, new Tick(), Sender);
+            _cancelRequest = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(message.Wait, message.NotificationInterval, Self, new Tick(), Sender);
         }
 
         private void HandleStop(StopCounting message)
@@ -78,7 +81,13 @@ namespace BeEfficient.Pomodoro.Core.Actors
         {
             _timeLeft -= _interval;
 
-            Sender.Tell(new TimeCoordinatorActor.ElapsedTimeMessage(_timeLeft, _originalDuration));
+            Sender.Tell(new TimeCoordinatorActor.TimeElapsingMessage(_timeLeft, _originalDuration));
+
+            if (_timeLeft <= TimeSpan.Zero)
+            {
+                Self.Tell(new StopCounting());
+                Sender.Tell(new TimeCoordinatorActor.TimeElapsedMessage());
+            }
         }
     }
 }

@@ -6,30 +6,32 @@ namespace BeEfficient.Pomodoro.Core.Actors
 {
     public class TimeCoordinatorActor : ReceiveActor
     {
-        private readonly UpdateTimeAction _updateTimeAction;
-
         #region messages
         internal class StartMessage { }
         internal class StopMessage { }
-        internal class ElapsedTimeMessage
+        internal class TimeElapsingMessage
         {
             public TimeSpan RemainingTime { get; }
             public TimeSpan InitialDuration { get; }
 
-            public ElapsedTimeMessage(TimeSpan remainingTime, TimeSpan initialDuration)
+            public TimeElapsingMessage(TimeSpan remainingTime, TimeSpan initialDuration)
             {
                 RemainingTime = remainingTime;
                 InitialDuration = initialDuration;
             }
         }
+
+        internal class TimeElapsedMessage { }
         #endregion
 
         private readonly IActorRef _timerActor;
-        
-        public TimeCoordinatorActor(UpdateTimeAction updateTimeAction)
-        {
-            _updateTimeAction = updateTimeAction;
+        private readonly IActorRef _notificationActor;
 
+        private int _numberOfCycles;
+        
+        public TimeCoordinatorActor(IActorRef notificationActor)
+        {
+            _notificationActor = notificationActor;
             var timerActorProps = Props.Create(() => new TimerActor());
             _timerActor = Context.ActorOf(timerActorProps, "timerActor");
 
@@ -40,10 +42,9 @@ namespace BeEfficient.Pomodoro.Core.Actors
         {
             Receive<StartMessage>(message =>
             {
-                Context.GetLogger().Warning("Waiting - Start Message");
-
+                Context.GetLogger().Debug("WaitingCoordinator -> Start Message");
                 Become(Working);
-                _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.FromMinutes(25), TimeSpan.FromSeconds(1)));
+                HandleStart();
             });
             Receive<StopMessage>(message => { });
         }
@@ -53,17 +54,71 @@ namespace BeEfficient.Pomodoro.Core.Actors
             Receive<StartMessage>(message => { });
             Receive<StopMessage>(message =>
             {
-                Context.GetLogger().Warning("Working - Stop Message");
-
+                Context.GetLogger().Debug("WorkingCoordinator -> Stop Message");
                 Become(Waiting);
-                _timerActor.Tell(new TimerActor.StopCounting());
+                HandleStop();
             });
-            Receive<ElapsedTimeMessage>(message =>
+            Receive<TimeElapsingMessage>(message =>
             {
-                _updateTimeAction(message.RemainingTime, message.InitialDuration);
+                HandleElapsingTime(message);
+            });
+            Receive<TimeElapsedMessage>(message =>
+            {
+                HandleElapsedTime();
             });
         }
 
-        public delegate void UpdateTimeAction(TimeSpan remainingTime, TimeSpan initialDuration);
+        private void HandleStart()
+        {
+            _numberOfCycles = 0;
+            _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.Zero, TimeSpan.FromSeconds(11), TimeSpan.FromSeconds(1)));
+            _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.Working));
+        }
+
+        private void HandleStop()
+        {
+            _numberOfCycles = 0;
+
+            _timerActor.Tell(new TimerActor.StopCounting());
+
+            _notificationActor.Tell(new NotificationActor.NotifyTimeChanged(TimeSpan.Zero, TimeSpan.Zero));
+            _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.NotWorking));
+        }
+
+        private void HandleElapsingTime(TimeElapsingMessage message)
+        {
+            _notificationActor.Tell(new NotificationActor.NotifyTimeChanged(message.RemainingTime, message.InitialDuration));
+        }
+
+        private void HandleElapsedTime()
+        {
+            _numberOfCycles++;
+
+            int estimatedDuration = 0;
+
+            if (_numberOfCycles < 2)
+            {
+                estimatedDuration = 25;
+                _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.Working));
+            }
+            else if (_numberOfCycles == 2)
+            {
+                estimatedDuration = 5;
+                _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.ShortBreak));
+            }
+            else if (_numberOfCycles == 3)
+            {
+                estimatedDuration = 25;
+                _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.Working));
+            }
+            else
+            {
+                estimatedDuration = 15;
+                _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.LongBreak));
+            }
+
+            var duration = TimeSpan.FromSeconds(estimatedDuration).Add(TimeSpan.FromSeconds(1));
+            _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.FromSeconds(1), duration, TimeSpan.FromSeconds(1)));
+        }
     }
 }
