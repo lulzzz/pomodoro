@@ -8,16 +8,17 @@ namespace BeEfficient.Pomodoro.Core
     {
         private readonly IActorRef _timeCoordinator;
         private readonly IActorRef _notificationActor;
+        private readonly ActorSystem _actorSystem;
 
         public CoreSystem()
         {
-            var actorSystem = ActorSystem.Create("BeEfficientPomodoro");
+            _actorSystem = ActorSystem.Create("BeEfficientPomodoro");
 
             Props notificationActor = Props.Create(() => new NotificationActor(OnUpdateRequested, OnCycleChanged));
-            _notificationActor = actorSystem.ActorOf(notificationActor, "notificationActor");
+            _notificationActor = _actorSystem.ActorOf(notificationActor, "notificationActor");
 
             Props timeCoordinatorActorProps = Props.Create(() => new TimeCoordinatorActor(_notificationActor));
-            _timeCoordinator = actorSystem.ActorOf(timeCoordinatorActorProps, "timeCoordinator");
+            _timeCoordinator = _actorSystem.ActorOf(timeCoordinatorActorProps, "timeCoordinator");
         }
 
         public void Start()
@@ -28,6 +29,11 @@ namespace BeEfficient.Pomodoro.Core
         public void Stop()
         {
             _timeCoordinator.Tell(new TimeCoordinatorActor.StopMessage());
+        }
+
+        public void ShutDown()
+        {
+            _actorSystem.Terminate();
         }
 
         private void OnUpdateRequested(TimeSpan remainingtime, TimeSpan initialduration)

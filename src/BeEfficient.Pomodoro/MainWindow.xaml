@@ -4,22 +4,34 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:pomodoro="clr-namespace:BeEfficient.Pomodoro"
+        xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
         mc:Ignorable="d"
         Title="Be efficient! Pomodoro" 
         Height="150" Width="220" 
         ResizeMode="CanMinimize" 
         WindowStyle="SingleBorderWindow"
         WindowStartupLocation="CenterScreen" 
+        Icon="Resources/icon.png"
         
         d:DataContext="{d:DesignInstance pomodoro:MainViewModel, IsDesignTimeCreatable=True}">
+
+    <Window.TaskbarItemInfo>
+        <TaskbarItemInfo Description="{Binding Progress}" ProgressValue="{Binding ProgressPercent}" ProgressState="{Binding ProgressState}"/>
+    </Window.TaskbarItemInfo>
+    <i:Interaction.Triggers>
+        <i:EventTrigger EventName="Closed">
+            <i:InvokeCommandAction Command="{Binding CloseWindowCommand}"/>
+        </i:EventTrigger>
+    </i:Interaction.Triggers>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="{Binding Progress}" FontSize="30" Foreground="SlateGray" HorizontalAlignment="Center" VerticalAlignment="Center" />
-        <TextBlock  Grid.Row="1" Text="{Binding CycleName}" FontSize="15" Foreground="Gainsboro" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <TextBlock Grid.Row="0" Text="{Binding Progress}" FontSize="30" Foreground="DarkSlateGray" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <TextBlock  Grid.Row="1" Text="{Binding CycleName}" FontSize="15" Foreground="SlateGray" HorizontalAlignment="Center" VerticalAlignment="Center" />
         <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
             <Button Margin="5" Content="Start" Width="70" Command="{Binding StartCommand}" />
             <Button Margin="5" Content="Stop" Width="70" Command="{Binding StopCommand}" />

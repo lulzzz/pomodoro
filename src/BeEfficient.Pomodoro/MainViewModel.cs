@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Shell;
 using BeEfficient.Pomodoro.Commands;
 using BeEfficient.Pomodoro.Core;
 using BeEfficient.Pomodoro.Core.Actors;
@@ -11,18 +12,23 @@ namespace BeEfficient.Pomodoro
     [ImplementPropertyChanged]
     public class MainViewModel
     {
-        private bool _running;
+        private readonly Action _bringToFront;
         private readonly CoreSystem _core;
 
+        private bool _running;
         public string Progress { get; set; }
         public int CycleNumber { get; set; }
         public string CycleName { get; set; }
+        public double ProgressPercent { get; set; }
+        public TaskbarItemProgressState ProgressState { get; set; }
 
         public ICommand StartCommand { get; set; }
         public ICommand StopCommand { get; set; }
+        public ICommand CloseWindowCommand { get; set; }
 
-        public MainViewModel()
+        public MainViewModel(Action bringToFront)
         {
+            _bringToFront = bringToFront;
             _core = new CoreSystem();
 
             _core.StateChanged += CoreOnStateChanged;
@@ -32,6 +38,12 @@ namespace BeEfficient.Pomodoro
 
             StartCommand = new RelayCommand(Start, CanStart);
             StopCommand  = new RelayCommand(Stop, CanStop);
+            CloseWindowCommand = new RelayCommand(Close);
+        }
+
+        private void Close()
+        {
+            _core.ShutDown();
         }
 
         private void CoreOnStateChanged(TimeSpan remainingtime, TimeSpan initialduration)
@@ -39,6 +51,7 @@ namespace BeEfficient.Pomodoro
             Application.Current.Dispatcher.Invoke(() =>
             {
                 Progress = remainingtime.ToString();
+                ProgressPercent = (initialduration.TotalSeconds - remainingtime.TotalSeconds)/initialduration.TotalSeconds;
             });
         }
 
@@ -48,9 +61,27 @@ namespace BeEfficient.Pomodoro
             {
                 CycleNumber = cycleNumber;
                 CycleName = GetCycleName(type);
+                ProgressState = GetProgressState(type);
 
-                MessageBox.Show(CycleName, string.Empty, MessageBoxButton.OK, MessageBoxImage.Information);
+                _bringToFront();
+                System.Media.SystemSounds.Beep.Play();
             });
+        }
+
+        private TaskbarItemProgressState GetProgressState(CycleTypes type)
+        {
+            switch (type)
+            {
+                case CycleTypes.NotWorking:
+                    return TaskbarItemProgressState.None;
+                case CycleTypes.Working:
+                    return TaskbarItemProgressState.Error;
+                case CycleTypes.ShortBreak:
+                case CycleTypes.LongBreak:
+                    return TaskbarItemProgressState.Normal;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
         }
 
         private string GetCycleName(CycleTypes type)

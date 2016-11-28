@@ -71,8 +71,11 @@ namespace BeEfficient.Pomodoro.Core.Actors
         private void HandleStart()
         {
             _numberOfCycles = 0;
-            _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.Zero, TimeSpan.FromMinutes(25).Add(TimeSpan.FromSeconds(1)), TimeSpan.FromSeconds(1)));
-            _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.Working));
+
+            var cycleParams = GetCycleParams(_numberOfCycles);
+
+            _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.Zero, cycleParams.EstimatedDuration, TimeSpan.FromSeconds(1)));
+            _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, cycleParams.CycleType));
         }
 
         private void HandleStop()
@@ -93,32 +96,56 @@ namespace BeEfficient.Pomodoro.Core.Actors
         private void HandleElapsedTime()
         {
             _numberOfCycles++;
+            
+            var cycleParams = GetCycleParams(_numberOfCycles);
+            _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, cycleParams.CycleType));
+            _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.FromSeconds(1), cycleParams.EstimatedDuration, TimeSpan.FromSeconds(1)));
+            _numberOfCycles = cycleParams.NextCycleNumber;
+        }
 
+        private static CycleParams GetCycleParams(int cycleNumber)
+        {
             int estimatedDuration = 0;
+            CycleTypes cycleType = 0;
+            int nextCycleNumber = cycleNumber;
 
-            if (_numberOfCycles < 2)
+            if (cycleNumber < 2)
             {
                 estimatedDuration = 25;
-                _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.Working));
+                cycleType = CycleTypes.Working;
             }
-            else if (_numberOfCycles == 2)
+            else if (cycleNumber == 2)
             {
                 estimatedDuration = 5;
-                _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.ShortBreak));
+                cycleType = CycleTypes.ShortBreak;
             }
-            else if (_numberOfCycles == 3)
+            else if (cycleNumber == 3)
             {
                 estimatedDuration = 25;
-                _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.Working));
+                cycleType = CycleTypes.Working;
             }
             else
             {
                 estimatedDuration = 15;
-                _notificationActor.Tell(new NotificationActor.NotifyCycleChanged(_numberOfCycles, CycleTypes.LongBreak));
+                cycleType = CycleTypes.LongBreak;
+                nextCycleNumber = 0;
             }
+            
+            return new CycleParams
+            {
+                EstimatedDuration = TimeSpan.FromMinutes(estimatedDuration).Add(TimeSpan.FromSeconds(1)),
+                CycleType = cycleType,
+                NextCycleNumber = nextCycleNumber
+            };
+        }
 
-            var duration = TimeSpan.FromMinutes(estimatedDuration).Add(TimeSpan.FromSeconds(1));
-            _timerActor.Tell(new TimerActor.StartCounting(TimeSpan.FromSeconds(1), duration, TimeSpan.FromSeconds(1)));
+        struct CycleParams
+        {
+            public int NextCycleNumber { get; set; }
+            public TimeSpan EstimatedDuration { get; set; }
+            public CycleTypes CycleType { get; set; }
         }
     }
+
+
 }

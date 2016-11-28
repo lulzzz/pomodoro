@@ -10,7 +10,25 @@ namespace BeEfficient.Pomodoro
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new MainViewModel();
+            DataContext = new MainViewModel(BringToFront);
+        }
+
+        private void BringToFront()
+        {
+            if (IsVisible == false)
+            {
+                Show();
+            }
+
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+
+            Activate();
+            Topmost = true;  // important
+            Topmost = false; // important
+            Focus();
         }
     }
 }
