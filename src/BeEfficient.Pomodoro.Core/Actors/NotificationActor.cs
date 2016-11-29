@@ -33,17 +33,17 @@ namespace BeEfficient.Pomodoro.Core.Actors
 
         #endregion messages
 
-        private readonly UpdateTimeAction _onUpdateRequested;
+        private readonly UpdateTimeAction _onUpdateTimeRequested;
         private readonly CycleChangedAction _onCycleChanged;
 
-        public NotificationActor(UpdateTimeAction onUpdateRequested, CycleChangedAction onCycleChanged)
+        public NotificationActor(UpdateTimeAction onUpdateTimeRequested, CycleChangedAction onCycleChanged)
         {
-            _onUpdateRequested = onUpdateRequested;
+            _onUpdateTimeRequested = onUpdateTimeRequested;
             _onCycleChanged = onCycleChanged;
 
             Receive<NotifyTimeChanged>(message =>
             {
-                _onUpdateRequested(message.RemainingTime, message.InitialDuration);
+                _onUpdateTimeRequested(message.RemainingTime, message.InitialDuration);
             });
 
             Receive<NotifyCycleChanged>(message =>
@@ -51,9 +51,5 @@ namespace BeEfficient.Pomodoro.Core.Actors
                 _onCycleChanged(message.CycleNumber, message.CycleType);
             });
         }
-
-        public delegate void UpdateTimeAction(TimeSpan remainingTime, TimeSpan initialDuration);
-
-        public delegate void CycleChangedAction(int cycleNumber, CycleTypes types);
     }
 }

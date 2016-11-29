@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Subjects;
 using Akka.Actor;
 using BeEfficient.Pomodoro.Core.Actors;
 
@@ -14,7 +15,13 @@ namespace BeEfficient.Pomodoro.Core
         {
             _actorSystem = ActorSystem.Create("BeEfficientPomodoro");
 
-            Props notificationActor = Props.Create(() => new NotificationActor(OnUpdateRequested, OnCycleChanged));
+            Time = new Subject<Time>();
+            Cycle = new Subject<Cycle>();
+
+            UpdateTimeAction updateStateAction = (remainingtime, initialDuration) => Time.OnNext(new Time(remainingtime, initialDuration));
+            CycleChangedAction cycleChangedAction = (cycleNumber, cycleType) => Cycle.OnNext(new Cycle(cycleNumber, cycleType));
+
+            Props notificationActor = Props.Create(() => new NotificationActor(updateStateAction, cycleChangedAction));
             _notificationActor = _actorSystem.ActorOf(notificationActor, "notificationActor");
 
             Props timeCoordinatorActorProps = Props.Create(() => new TimeCoordinatorActor(_notificationActor));
@@ -36,22 +43,9 @@ namespace BeEfficient.Pomodoro.Core
             _actorSystem.Terminate();
         }
 
-        private void OnUpdateRequested(TimeSpan remainingtime, TimeSpan initialduration)
-        {
-            StateChanged?.Invoke(remainingtime, initialduration);
-        }
-
-        private void OnCycleChanged(int cycleNumber, CycleTypes types)
-        {
-            CycleChanged?.Invoke(cycleNumber, types);
-        }
-
-        public event StateChangedHandler StateChanged;
-
-        public event CycleChangedHandler CycleChanged;
-
-        public delegate void StateChangedHandler(TimeSpan remainingtime, TimeSpan initialduration);
-
-        public delegate void CycleChangedHandler(int cycleNumber, CycleTypes type);
+        public Subject<Cycle> Cycle { get; }
+        public Subject<Time> Time { get; }
     }
+
+
 }

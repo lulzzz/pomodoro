@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Windows;
+using System.Reactive.Linq;
 using System.Windows.Input;
 using System.Windows.Shell;
 using BeEfficient.Pomodoro.Commands;
@@ -31,41 +31,54 @@ namespace BeEfficient.Pomodoro
             _bringToFront = bringToFront;
             _core = new CoreSystem();
 
-            _core.StateChanged += CoreOnStateChanged;
-            _core.CycleChanged += CycleChanged;
-
             _running = false;
 
             StartCommand = new RelayCommand(Start, CanStart);
-            StopCommand  = new RelayCommand(Stop, CanStop);
+            StopCommand = new RelayCommand(Stop, CanStop);
             CloseWindowCommand = new RelayCommand(Close);
+
+            _core.State
+                .Select(state => new
+                {
+                    RemainingTime = state.RemainingTime.ToString(),
+                    ProgressPercent = ComputerPercentage(state.InitialDuration, state.RemainingTime)
+                })
+                .ObserveOnDispatcher()
+                .Subscribe(state =>
+                {
+                    Progress = state.RemainingTime;
+                    ProgressPercent = state.ProgressPercent;
+                });
+
+            _core.Cycle
+                .Select(cycle => new
+                {
+                    CycleNumber = cycle.CycleNumber,
+                    CycleName = GetCycleName(cycle.Type),
+                    ProgressState = GetProgressState(cycle.Type),
+                    Type = cycle.Type
+                })
+                .ObserveOnDispatcher()
+                .Subscribe(cycle =>
+                {
+                    CycleName = cycle.CycleName;
+                    CycleNumber = cycle.CycleNumber;
+                    ProgressState = cycle.ProgressState;
+                    _running = cycle.Type != CycleTypes.NotWorking;
+
+                    _bringToFront();
+                    System.Media.SystemSounds.Beep.Play();
+                });
+        }
+
+        private static double ComputerPercentage(TimeSpan initialDuration, TimeSpan remainingTime)
+        {
+            return (initialDuration.TotalSeconds - remainingTime.TotalSeconds) / initialDuration.TotalSeconds;
         }
 
         private void Close()
         {
             _core.ShutDown();
-        }
-
-        private void CoreOnStateChanged(TimeSpan remainingtime, TimeSpan initialduration)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                Progress = remainingtime.ToString();
-                ProgressPercent = (initialduration.TotalSeconds - remainingtime.TotalSeconds)/initialduration.TotalSeconds;
-            });
-        }
-
-        private void CycleChanged(int cycleNumber, CycleTypes type)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                CycleNumber = cycleNumber;
-                CycleName = GetCycleName(type);
-                ProgressState = GetProgressState(type);
-
-                _bringToFront();
-                System.Media.SystemSounds.Beep.Play();
-            });
         }
 
         private TaskbarItemProgressState GetProgressState(CycleTypes type)
@@ -95,7 +108,7 @@ namespace BeEfficient.Pomodoro
                 case CycleTypes.ShortBreak:
                     return "Krótka przerwa";
                 case CycleTypes.LongBreak:
-                    return "Długa przerwa";;
+                    return "Długa przerwa"; ;
             }
 
             return string.Empty;
@@ -104,12 +117,10 @@ namespace BeEfficient.Pomodoro
         private void Start()
         {
             _core.Start();
-            _running = true;
         }
 
         private void Stop()
         {
-            _running = false;
             _core.Stop();
         }
 

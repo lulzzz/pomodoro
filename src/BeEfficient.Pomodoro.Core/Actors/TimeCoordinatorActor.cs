@@ -146,6 +146,4 @@ namespace BeEfficient.Pomodoro.Core.Actors
             public CycleTypes CycleType { get; set; }
         }
     }
-
-
 }
