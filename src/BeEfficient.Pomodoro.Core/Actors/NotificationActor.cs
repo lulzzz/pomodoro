@@ -1,5 +1,6 @@
 ﻿using System;
 using Akka.Actor;
+using BeEfficient.Pomodoro.Core.Model;
 
 namespace BeEfficient.Pomodoro.Core.Actors
 {
@@ -33,10 +34,10 @@ namespace BeEfficient.Pomodoro.Core.Actors
 
         #endregion messages
 
-        private readonly UpdateTimeAction _onUpdateTimeRequested;
-        private readonly CycleChangedAction _onCycleChanged;
+        private readonly Time.UpdateTimeAction _onUpdateTimeRequested;
+        private readonly Cycle.CycleChangedAction _onCycleChanged;
 
-        public NotificationActor(UpdateTimeAction onUpdateTimeRequested, CycleChangedAction onCycleChanged)
+        public NotificationActor(Time.UpdateTimeAction onUpdateTimeRequested, Cycle.CycleChangedAction onCycleChanged)
         {
             _onUpdateTimeRequested = onUpdateTimeRequested;
             _onCycleChanged = onCycleChanged;

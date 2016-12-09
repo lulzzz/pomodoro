@@ -37,7 +37,7 @@ namespace BeEfficient.Pomodoro
             StopCommand = new RelayCommand(Stop, CanStop);
             CloseWindowCommand = new RelayCommand(Close);
 
-            _core.State
+            _core.Time
                 .Select(state => new
                 {
                     RemainingTime = state.RemainingTime.ToString(),

@@ -2,6 +2,7 @@
 using System.Reactive.Subjects;
 using Akka.Actor;
 using BeEfficient.Pomodoro.Core.Actors;
+using BeEfficient.Pomodoro.Core.Model;
 
 namespace BeEfficient.Pomodoro.Core
 {
@@ -18,8 +19,8 @@ namespace BeEfficient.Pomodoro.Core
             Time = new Subject<Time>();
             Cycle = new Subject<Cycle>();
 
-            UpdateTimeAction updateStateAction = (remainingtime, initialDuration) => Time.OnNext(new Time(remainingtime, initialDuration));
-            CycleChangedAction cycleChangedAction = (cycleNumber, cycleType) => Cycle.OnNext(new Cycle(cycleNumber, cycleType));
+            Time.UpdateTimeAction updateStateAction = (remainingtime, initialDuration) => Time.OnNext(new Time(remainingtime, initialDuration));
+            Cycle.CycleChangedAction cycleChangedAction = (cycleNumber, cycleType) => Cycle.OnNext(new Cycle(cycleNumber, cycleType));
 
             Props notificationActor = Props.Create(() => new NotificationActor(updateStateAction, cycleChangedAction));
             _notificationActor = _actorSystem.ActorOf(notificationActor, "notificationActor");
